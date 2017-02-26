@@ -91,7 +91,7 @@
 <meta property="og:site_name" content="凡锅锅的博客">
 <meta property="og:description" content="总结之前做过的几个项目的时候发现，用到的spi相关的几个东西可以组合起来形成一套完整的体系，包括：编写spi驱动项目、ECU监控项目中的spi通信、fatfs文件系统移植项目中的spi操作flash、usb项目中的spi读写flash和sdcard。">
 <meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170226/144439171.jpg">
-<meta property="og:updated_time" content="2017-02-26T07:53:11.616Z">
+<meta property="og:updated_time" content="2017-02-26T08:40:56.350Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="从驱动到文件系统之0、总体架构">
 <meta name="twitter:description" content="总结之前做过的几个项目的时候发现，用到的spi相关的几个东西可以组合起来形成一套完整的体系，包括：编写spi驱动项目、ECU监控项目中的spi通信、fatfs文件系统移植项目中的spi操作flash、usb项目中的spi读写flash和sdcard。">
@@ -365,6 +365,8 @@
 </ul>
 <p>USB的研究放在下一个专题来讲。<br>SPI主从通信在图中未表示出，需要另一个ECU。</p>
 <p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170226/144439171.jpg" alt="image"></p>
+<p>ECU在USB项目中是MSP430 ，在fatfs移植项目中是cortex M0</p>
+<p>flash在fatfs移植项目中是W25Q16，在USB项目中先是sdcard，后来换成W25Q256</p>
 
       
     </div>
@@ -406,6 +408,10 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/02/26/从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard/" rel="prev" title="从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard">
+                从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -473,7 +479,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">4</span>
+              <span class="site-state-item-count">5</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>

@@ -1,0 +1,706 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="嵌入式," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="在移植fatfs文件系统时，用到了w25q16 这款spi flash，后面在做USB项目时，TI的板子上没有spi flash，是sdcard，所以研究了一下spi操作sdcard，后来新做的板子又替换成了spi flash，这里总结一下SPI操作flash。
+flash在fatfs移植项目中是W25Q16，在USB项目中先是sdcard，后来换成W25Q256。 16表示16Mb，256表示2">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard">
+<meta property="og:url" content="http://yoursite.com/2017/02/26/从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard/index.html">
+<meta property="og:site_name" content="凡锅锅的博客">
+<meta property="og:description" content="在移植fatfs文件系统时，用到了w25q16 这款spi flash，后面在做USB项目时，TI的板子上没有spi flash，是sdcard，所以研究了一下spi操作sdcard，后来新做的板子又替换成了spi flash，这里总结一下SPI操作flash。
+flash在fatfs移植项目中是W25Q16，在USB项目中先是sdcard，后来换成W25Q256。 16表示16Mb，256表示2">
+<meta property="og:updated_time" content="2017-02-26T11:51:22.935Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard">
+<meta name="twitter:description" content="在移植fatfs文件系统时，用到了w25q16 这款spi flash，后面在做USB项目时，TI的板子上没有spi flash，是sdcard，所以研究了一下spi操作sdcard，后来新做的板子又替换成了spi flash，这里总结一下SPI操作flash。
+flash在fatfs移植项目中是W25Q16，在USB项目中先是sdcard，后来换成W25Q256。 16表示16Mb，256表示2">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"always"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2017/02/26/从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard/"/>
+
+
+
+
+
+  <title> 从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard | 凡锅锅的博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">凡锅锅的博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">刻意去找的东西，往往是找不到的。天下万物的来和去，都有他的时间。</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/02/26/从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="凡爷">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/uploads/234.jpg">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="凡锅锅的博客">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="凡锅锅的博客" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-02-26T17:26:33+08:00">
+                2017-02-26
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+              <span class="post-meta-divider">|</span>
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/嵌入式/" itemprop="url" rel="index">
+                    <span itemprop="name">嵌入式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在移植fatfs文件系统时，用到了w25q16 这款spi flash，后面在做USB项目时，TI的板子上没有spi flash，是sdcard，所以研究了一下spi操作sdcard，后来新做的板子又替换成了spi flash，这里总结一下SPI操作flash。</p>
+<p>flash在fatfs移植项目中是W25Q16，在USB项目中先是sdcard，后来换成W25Q256。 16表示16Mb，256表示256Mb（bit）</p>
+<p>25系列是最常用的存储芯片，路由器中一般也是这个。</p>
+<h2 id="SPI-Flash"><a href="#SPI-Flash" class="headerlink" title="SPI Flash"></a>SPI Flash</h2><p>SPI操作w25qXX 系列flash和sdcard的程序 其实就是flash和sdcard的驱动程序，芯片只对外提供了芯片手册，芯片手册中有操作此芯片的命令，主MCU通过SPI等总线来写这些命令到芯片中去，以此来控制flash和sdcard。</p>
+<p>w25q系列，一个扇区大小是4096字节，页大小是256字节。</p>
+<p>我们这一层的程序主要需要向上层提供的接口包括：</p>
+<ul>
+<li>初始化SPI总线：设置GPIO、主从模式、MSB、时钟频率等</li>
+<li>读取W25Q256的状态寄存器（0x05：读状态寄存器1）</li>
+<li>根据状态寄存器检查SPI  flash的BUSY位，等待W25Q16空闲</li>
+<li>擦除整片芯片（0x06：写使能  0xc7：片擦除）</li>
+<li>擦除一个扇区（0x06：写使能  0x20：扇区擦除）</li>
+<li>页读取（0x03：读数据命令）</li>
+<li>页写入（0x06：写使能  0x02：页写）</li>
+<li>按字节读取（同页读）</li>
+<li>按字节写入（同页写）</li>
+</ul>
+<p>擦除扇区、页读写、字节读写都需要传入24位地址参数，按字节读写需要传入读写字节数</p>
+<p>需要调用SPI驱动的接口包括：</p>
+<ul>
+<li>初始化SPI总线的一系列函数</li>
+<li>判断总线是否空闲</li>
+<li>按字节写</li>
+<li>按字节接收</li>
+</ul>
+<h2 id="SDCard"><a href="#SDCard" class="headerlink" title="SDCard"></a>SDCard</h2><p>SDCard有两种模式，SD模式和SPI模式，其中SPI模式相当于就将SDCard当做一个spi flash来使用了。</p>
+<p>操作SDCard的思路跟SPI flash差不多，只是SDCard有自己的协议和命令类型。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">/* MMC/SD command (SPI mode) */</div><div class="line">#define CMD0    (0)                                                     /* GO_IDLE_STATE */</div><div class="line">#define CMD1    (1)                                                     /* SEND_OP_COND */</div><div class="line">#define ACMD41  (0x80 + 41)                                             /* SEND_OP_COND (SDC) */</div><div class="line">#define CMD8    (8)                                                     /* SEND_IF_COND */</div><div class="line">#define CMD9    (9)                                                     /* SEND_CSD */</div><div class="line">#define CMD10   (10)                                                    /* SEND_CID */</div><div class="line">#define CMD12   (12)                                                    /* STOP_TRANSMISSION */</div><div class="line">#define ACMD13  (0x80 + 13)                                             /* SD_STATUS (SDC) */</div><div class="line">#define CMD16   (16)                                                    /* SET_BLOCKLEN */</div><div class="line">#define CMD17   (17)                                                    /* READ_SINGLE_BLOCK */</div><div class="line">#define CMD18   (18)                                                    /* READ_MULTIPLE_BLOCK */</div><div class="line">#define CMD23   (23)                                                    /* SET_BLOCK_COUNT */</div><div class="line">#define ACMD23  (0x80 + 23)                                             /* SET_WR_BLK_ERASE_COUNT (SDC) */</div><div class="line">#define CMD24   (24)                                                    /* WRITE_BLOCK */</div><div class="line">#define CMD25   (25)                                                    /* WRITE_MULTIPLE_BLOCK */</div><div class="line">#define CMD41   (41)                                                    /* SEND_OP_COND (ACMD) */</div><div class="line">#define CMD55   (55)                                                    /* APP_CMD */</div><div class="line">#define CMD58   (58)                                                    /* READ_OCR */</div></pre></td></tr></table></figure>
+<h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><p>W25Q256芯片手册（官网）</p>
+<p>新塘cortex M0芯片手册和SPI驱动程序</p>
+<p>MSP430 SPI驱动程序</p>
+<p><a href="http://www.cnblogs.com/mr-bike/p/3546228.html" target="_blank" rel="external">SD卡总结-SPI模式</a></p>
+<p>附上SPI读写W25Q16的实例代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div><div class="line">155</div><div class="line">156</div><div class="line">157</div><div class="line">158</div><div class="line">159</div><div class="line">160</div><div class="line">161</div><div class="line">162</div><div class="line">163</div><div class="line">164</div><div class="line">165</div><div class="line">166</div><div class="line">167</div><div class="line">168</div><div class="line">169</div><div class="line">170</div><div class="line">171</div><div class="line">172</div><div class="line">173</div><div class="line">174</div><div class="line">175</div><div class="line">176</div><div class="line">177</div><div class="line">178</div><div class="line">179</div><div class="line">180</div><div class="line">181</div><div class="line">182</div><div class="line">183</div><div class="line">184</div><div class="line">185</div><div class="line">186</div><div class="line">187</div><div class="line">188</div><div class="line">189</div><div class="line">190</div><div class="line">191</div><div class="line">192</div><div class="line">193</div><div class="line">194</div><div class="line">195</div><div class="line">196</div><div class="line">197</div><div class="line">198</div><div class="line">199</div><div class="line">200</div><div class="line">201</div><div class="line">202</div><div class="line">203</div><div class="line">204</div><div class="line">205</div><div class="line">206</div><div class="line">207</div><div class="line">208</div><div class="line">209</div><div class="line">210</div><div class="line">211</div><div class="line">212</div><div class="line">213</div><div class="line">214</div><div class="line">215</div><div class="line">216</div><div class="line">217</div><div class="line">218</div><div class="line">219</div><div class="line">220</div><div class="line">221</div><div class="line">222</div><div class="line">223</div><div class="line">224</div><div class="line">225</div><div class="line">226</div><div class="line">227</div><div class="line">228</div><div class="line">229</div><div class="line">230</div><div class="line">231</div><div class="line">232</div><div class="line">233</div><div class="line">234</div><div class="line">235</div><div class="line">236</div><div class="line">237</div><div class="line">238</div><div class="line">239</div><div class="line">240</div><div class="line">241</div><div class="line">242</div><div class="line">243</div><div class="line">244</div><div class="line">245</div><div class="line">246</div><div class="line">247</div><div class="line">248</div><div class="line">249</div><div class="line">250</div><div class="line">251</div><div class="line">252</div><div class="line">253</div><div class="line">254</div><div class="line">255</div><div class="line">256</div><div class="line">257</div><div class="line">258</div><div class="line">259</div><div class="line">260</div><div class="line">261</div><div class="line">262</div><div class="line">263</div><div class="line">264</div><div class="line">265</div><div class="line">266</div><div class="line">267</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">#include &quot;W25Q16.h&quot;</div><div class="line">#include &quot;includes.h&quot;</div><div class="line"></div><div class="line">//*****************************************************************************</div><div class="line">//功能：初始化外设SPI2.</div><div class="line">//*****************************************************************************</div><div class="line">void SPI2_start(void)</div><div class="line">&#123;</div><div class="line">/* GPIO为SPI0所用*/</div><div class="line">DrvGPIO_InitFunction( E_FUNC_SPI2);</div><div class="line">/* SPI0为主模式, 传输类型=1, 32位传输 */</div><div class="line">DrvSPI_Open( eDRVSPI_PORT2, eDRVSPI_MASTER, eDRVSPI_TYPE1, 8);</div><div class="line">/* MSB优先 */</div><div class="line">DrvSPI_SetEndian( eDRVSPI_PORT2, eDRVSPI_MSB_FIRST);</div><div class="line">/* 禁止自动从选择 */</div><div class="line">DrvSPI_DisableAutoSS( eDRVSPI_PORT2);</div><div class="line">/* 从选择引脚低电平激活 */</div><div class="line">DrvSPI_SetSlaveSelectActiveLevel( eDRVSPI_PORT2, eDRVSPI_ACTIVE_LOW_FALLING);</div><div class="line">/* 禁止2比特传输模式 */</div><div class="line">DrvSPI_Set2BitTransferMode( eDRVSPI_PORT2, FALSE);</div><div class="line">/* SPI0的时钟频率为：1MHz */</div><div class="line">DrvSPI_SetClockFreq( eDRVSPI_PORT2,10000000,0);</div><div class="line">&#125;</div><div class="line">//*****************************************************************************</div><div class="line">//功能：核对制造商编号: 0xEF;器件编号：ID: 0x14.</div><div class="line">//输入：</div><div class="line">//输出：</div><div class="line">//*****************************************************************************</div><div class="line">void W25Q16_RMidDid(void)</div><div class="line">&#123;</div><div class="line">uint32_t x[1];</div><div class="line">/* 发送位宽为：8 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 8);</div><div class="line">/* 设置从选择引脚:SS0 */</div><div class="line">DrvSPI_SetSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">/* 发指令: 0x90, 读取MID/DID. */</div><div class="line">x[0] = 0x90;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 发送位宽为：24 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 24);</div><div class="line">/* 发送：24字节0 */</div><div class="line">x[0] = 0x1;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 发送位宽为：16 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 16);</div><div class="line">/* 接收*/</div><div class="line">x[0] = 0x0;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 禁止从选择引脚:SS0 */</div><div class="line">DrvSPI_ClrSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">/* 从：Rx寄存器读回数据 */</div><div class="line">DrvSPI_DumpRxRegister( eDRVSPI_PORT2, x, 1);</div><div class="line">/* 核对：MID and DID */</div><div class="line">x[0] &amp;= 0xFFFF;</div><div class="line">printf(&quot;%x&quot;,x[0]);</div><div class="line">//if (x[0]!= 0xEF14)</div><div class="line">//while (1);</div><div class="line">&#125;</div><div class="line">//*****************************************************************************</div><div class="line">//功能：读取W25Q16的状态寄存器1.</div><div class="line">//输出：y[0]&amp;0xFF;</div><div class="line">//*****************************************************************************</div><div class="line">uint32_t W25Q16_RSReg1(void)</div><div class="line">&#123;</div><div class="line">uint32_t x[1],y[1];</div><div class="line"></div><div class="line">/* 发送位宽为：16 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 16);</div><div class="line">/* 设置从选择引脚:SS0 */</div><div class="line">DrvSPI_SetSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">/* 发指令: 0x05,读状态寄存器1 */</div><div class="line">x[0] = 0x0500;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲*/</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 禁止从选择引脚:SS0 */</div><div class="line">DrvSPI_ClrSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">/* 从：Rx寄存器读回数据 */</div><div class="line">DrvSPI_DumpRxRegister( eDRVSPI_PORT2, y, 1);</div><div class="line">return(y[0]&amp; 0xFF);</div><div class="line">&#125;</div><div class="line">//*****************************************************************************</div><div class="line">//功能：检查SPI flash的BUSY位. 等待W25Q16空闲。</div><div class="line">//*****************************************************************************</div><div class="line">void W25Q16_WaitReady(void)</div><div class="line">&#123;</div><div class="line">uint32_t x;</div><div class="line">do</div><div class="line">&#123;</div><div class="line">x= W25Q16_RSReg1();</div><div class="line">x &amp;= 0x01;</div><div class="line">&#125; while (x!=0);</div><div class="line">&#125;</div><div class="line">//*****************************************************************************</div><div class="line">//功能：擦除W25Q16整片(10S)。</div><div class="line">//*****************************************************************************</div><div class="line">void W25Q16_CErase(void)</div><div class="line">&#123;</div><div class="line">uint32_t x[1];</div><div class="line">/* 等待空闲*/</div><div class="line">W25Q16_WaitReady();</div><div class="line">/* 发送位宽为：8 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 8);</div><div class="line">/* 设置从选择引脚:SS0 */</div><div class="line">DrvSPI_SetSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">/* 发指令: 0x06, 写使能 */</div><div class="line">x[0] = 0x06;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 禁止从选择引脚:SS0 */</div><div class="line">DrvSPI_ClrSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">//ms(2);</div><div class="line">/* 设置从选择引脚:SS0 */</div><div class="line">DrvSPI_SetSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">/* 发指令: 0xC7, 片擦除 */</div><div class="line">x[0] = 0xC7;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 禁止从选择引脚:SS0 */</div><div class="line">DrvSPI_ClrSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">&#125;</div><div class="line">//*****************************************************************************</div><div class="line">//功能：W25Q16:扇区擦除。 (400mS)</div><div class="line">//输入：Add:扇区起始地址。</div><div class="line">//*****************************************************************************</div><div class="line">void W25Q16_SErase( uint32_t Add)</div><div class="line">&#123;</div><div class="line">uint32_t x[1];</div><div class="line">/* 等待空闲*/</div><div class="line">W25Q16_WaitReady();</div><div class="line">/* 发送位宽为：8 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 8);</div><div class="line"></div><div class="line">/* 设置从选择引脚:SS0 */</div><div class="line">DrvSPI_SetSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">/* 发指令: 0x06, 写使能*/</div><div class="line">x[0] = 0x06;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲*/</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 禁止从选择引脚:SS0 */</div><div class="line">DrvSPI_ClrSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">//ms(2);</div><div class="line">/* 设置从选择引脚:SS0 */</div><div class="line">DrvSPI_SetSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">/* 发指令: 0x20，扇区擦除*/</div><div class="line">x[0]= 0x20;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 发送位宽为：24bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 24);</div><div class="line">/* 发送：24-bit起始地址 */</div><div class="line">Add &amp;= 0xFFFFF000;</div><div class="line">x[0] = Add;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲*/</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 禁止从选择引脚:SS0 */</div><div class="line">DrvSPI_ClrSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">&#125;</div><div class="line">//*****************************************************************************</div><div class="line">//功能：W25Q16页读取(和SPI0连接)。</div><div class="line">//输入：uint32_t Add.</div><div class="line">//输出：uint8_t *DBuf.</div><div class="line">//*****************************************************************************</div><div class="line">void W25Q16_PR( uint8_t *DBuf, uint32_t Add)</div><div class="line">&#123;</div><div class="line">uint32_t x[1],i;</div><div class="line">/* 等待空闲*/</div><div class="line">W25Q16_WaitReady();</div><div class="line">/* 发送位宽为：8 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 8);</div><div class="line">/* 设置从选择引脚:SS0 */</div><div class="line">DrvSPI_SetSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">/* 发送: 0x03, 读数据命令 */</div><div class="line">x[0] = 0x03;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 发送位宽为：24 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 24);</div><div class="line">/* 发送：24-bit起始地址 */</div><div class="line">Add &amp;= 0xFFFFFF00;</div><div class="line">x[0] = Add;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 发送位宽为：8 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 8);</div><div class="line">for(i=0; i&lt; 0x100; i++)</div><div class="line">&#123;</div><div class="line">/* 读取 */</div><div class="line">x[0] = 0x00;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 从：Rx寄存器读回数据 */</div><div class="line">DrvSPI_DumpRxRegister( eDRVSPI_PORT2, x, 1);</div><div class="line">DBuf[i] = ( uint8_t)x[0];</div><div class="line">&#125;</div><div class="line"></div><div class="line">	//printf(&quot;%x&quot;,DBuf[0]);</div><div class="line">	</div><div class="line">/* 禁止从选择引脚:SS0 */</div><div class="line">DrvSPI_ClrSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line"></div><div class="line">&#125;</div><div class="line">//*****************************************************************************</div><div class="line">//功能：W25Q16页写入。</div><div class="line">//输入：uint32_t Add页始地址，uint8_t *DBuf待写入的数组。</div><div class="line">//*****************************************************************************</div><div class="line">void W25Q16_PW( uint32_t Add, uint8_t *DBuf)</div><div class="line">&#123;</div><div class="line">uint32_t x[1],i;</div><div class="line">/* 等待空闲*/</div><div class="line">W25Q16_WaitReady();</div><div class="line">/* 发送位宽为：8 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 8);</div><div class="line">/* 设置从选择引脚:SS0 */</div><div class="line">DrvSPI_SetSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">/* 发指令: 0x06, 写使能 */</div><div class="line">x[0] = 0x06;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 禁止从选择引脚:SS0 */</div><div class="line">DrvSPI_ClrSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">//ms(2);</div><div class="line">/* 设置从选择引脚:SS0 */</div><div class="line">DrvSPI_SetSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">//</div><div class="line">/* 发指令: 0x02，页写 */</div><div class="line">x[0] = 0x02;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 发送位宽为：24 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 24);</div><div class="line">/* 发送：24-bit起始地址 */</div><div class="line">Add &amp;= 0xFFFFFF00;</div><div class="line">x[0] = Add;</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">/* 发送位宽为：8 bits */</div><div class="line">DrvSPI_SetBitLength( eDRVSPI_PORT2, 8);</div><div class="line">for(i=0;i&lt; 0x100;i++)</div><div class="line">&#123;</div><div class="line">/* 发送编程数据*/</div><div class="line">	//DBuf[i]=0x22;</div><div class="line">x[0]=DBuf[i];</div><div class="line">DrvSPI_SingleWrite( eDRVSPI_PORT2, x);</div><div class="line">/* 等待空闲 */</div><div class="line">while ( DrvSPI_IsBusy( eDRVSPI_PORT2));</div><div class="line">&#125;</div><div class="line">/* 禁止从选择引脚:SS0 */</div><div class="line">DrvSPI_ClrSS( eDRVSPI_PORT2, eDRVSPI_SS0);</div><div class="line">&#125;</div><div class="line">/* ****************************** END *********************************/</div></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/嵌入式/" rel="tag"># 嵌入式</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/02/26/从驱动到文件系统之0、总体架构/" rel="next" title="从驱动到文件系统之0、总体架构">
+                <i class="fa fa-chevron-left"></i> 从驱动到文件系统之0、总体架构
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/234.jpg"
+               alt="凡爷" />
+          <p class="site-author-name" itemprop="name">凡爷</p>
+          <p class="site-description motion-element" itemprop="description">我长大了要当一名科学家。</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">5</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">3</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://trecool.me/" title="Trecool" target="_blank">Trecool</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#SPI-Flash"><span class="nav-number">1.</span> <span class="nav-text">SPI Flash</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SDCard"><span class="nav-number">2.</span> <span class="nav-text">SDCard</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考资料"><span class="nav-number"></span> <span class="nav-text">参考资料</span></a></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">凡爷</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
