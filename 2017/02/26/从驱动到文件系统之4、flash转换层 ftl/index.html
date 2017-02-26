@@ -1,0 +1,706 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="嵌入式," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="最开始并没有Flash转换层的概念，后来在书《Linux设备驱动开发详解》中看到FTL和NFTL的概念，才知道移植fatfs文件系统时，要改变的那几个函数：disk_initialize、disk_write、disk_read、disk_ioctl其实就是实现的FTL最简单的功能：将逻辑地址映射成物理地址。
+FTL和NFTL概念FTL是Flash translation layer的英文缩写，F">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从驱动到文件系统之4、Flash转换层 FTL">
+<meta property="og:url" content="http://yoursite.com/2017/02/26/从驱动到文件系统之4、flash转换层 ftl/index.html">
+<meta property="og:site_name" content="凡锅锅的博客">
+<meta property="og:description" content="最开始并没有Flash转换层的概念，后来在书《Linux设备驱动开发详解》中看到FTL和NFTL的概念，才知道移植fatfs文件系统时，要改变的那几个函数：disk_initialize、disk_write、disk_read、disk_ioctl其实就是实现的FTL最简单的功能：将逻辑地址映射成物理地址。
+FTL和NFTL概念FTL是Flash translation layer的英文缩写，F">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170226/214820235.jpg">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170226/214343365.png">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170226/214421132.png">
+<meta property="og:updated_time" content="2017-02-26T14:05:05.802Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="从驱动到文件系统之4、Flash转换层 FTL">
+<meta name="twitter:description" content="最开始并没有Flash转换层的概念，后来在书《Linux设备驱动开发详解》中看到FTL和NFTL的概念，才知道移植fatfs文件系统时，要改变的那几个函数：disk_initialize、disk_write、disk_read、disk_ioctl其实就是实现的FTL最简单的功能：将逻辑地址映射成物理地址。
+FTL和NFTL概念FTL是Flash translation layer的英文缩写，F">
+<meta name="twitter:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170226/214820235.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"always"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2017/02/26/从驱动到文件系统之4、flash转换层 ftl/"/>
+
+
+
+
+
+  <title> 从驱动到文件系统之4、Flash转换层 FTL | 凡锅锅的博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">凡锅锅的博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">刻意去找的东西，往往是找不到的。天下万物的来和去，都有他的时间。</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/02/26/从驱动到文件系统之4、flash转换层 ftl/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="凡爷">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/uploads/234.jpg">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="凡锅锅的博客">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="凡锅锅的博客" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                从驱动到文件系统之4、Flash转换层 FTL
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-02-26T22:16:33+08:00">
+                2017-02-26
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+              <span class="post-meta-divider">|</span>
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/嵌入式/" itemprop="url" rel="index">
+                    <span itemprop="name">嵌入式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最开始并没有Flash转换层的概念，后来在书《Linux设备驱动开发详解》中看到FTL和NFTL的概念，才知道移植fatfs文件系统时，要改变的那几个函数：disk_initialize、disk_write、disk_read、disk_ioctl其实就是实现的FTL最简单的功能：将逻辑地址映射成物理地址。</p>
+<h1 id="FTL和NFTL概念"><a href="#FTL和NFTL概念" class="headerlink" title="FTL和NFTL概念"></a>FTL和NFTL概念</h1><p>FTL是Flash translation layer的英文缩写，FTL是一种软件中间层，最初是由intel提出的，用于将闪存模拟成为虚拟块设备，从而能够在闪存上实现FAT等等块设备类文件系统。</p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170226/214820235.jpg" alt="mark"></p>
+<p>FTL首先构造数据“虚拟”块，这些虚拟块独立于Flash设备的物理可擦除块，接着FTL管理Flash上的数据，使其看起来像原地更新（write in place），事实上这些数据被存储在Flash中不同的位置，最后FTL管理Flash物理块，进行垃圾回收，使得系统有一些已经被擦除过的、干净的空闲块用于存储数据。如果系统中存在多个Flash芯片，FTL通过编程模式将这些芯片组织成为一块“逻辑”芯片。</p>
+<p>再看书上的概念：</p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170226/214343365.png" alt="image"></p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170226/214421132.png" alt="mark"></p>
+<p>FTL应用于Nor Flash ， NFTL应用于Nand Flash</p>
+<p>主机上的FAT之类的文件系统一个扇区一般是512字节，特别是对软盘，固定为512字节，而我们的flash的一个页是256字节，一个扇区是4096字节，flash在写扇区之前必须要擦除扇区。所以要在主机上对一个扇区操作，需要一层FTL，做一次转换，强制以512字节来访问。</p>
+<h2 id="MTD概念"><a href="#MTD概念" class="headerlink" title="MTD概念"></a>MTD概念</h2><p>MTD(memory technology device 存储 技术设备 ) 是用于访问 memory 设备（ ROM 、 flash ）的 Linux 的子系统。 MTD 的主要目的是为了使新的 memory 设备的驱动更加简单，为此它在硬件和上层之间提供了一个抽象的接口。 MTD 的所有源代码在 /drivers/mtd 子目录下 。</p>
+<p>传统上， UNIX 只认识块设备和字符设备。字符设备是类似键盘或者鼠标的这类设备，你必须从它读取当前数据，但是不可以定位也没有大小。块设备有固定的大小并且可以定位， 它们恰好组织成许多字节的块，通常为 512 字节。</p>
+<p>闪存既不满足块设备描述也不满足字符设备的描述。它们表现的类似块设备，但又有所不同。比如，块设备不区分写和擦除操作。因此，一种符合闪存特性的特殊设备类型诞生了， 就是 MTD 设备。所以 MTD 既不是块设备，也不是字符设备</p>
+<h1 id="FTL功能"><a href="#FTL功能" class="headerlink" title="FTL功能"></a>FTL功能</h1><ul>
+<li>地址映射：将逻辑地址LBA映射成物理地址</li>
+<li>垃圾回收：使得系统有一些已经被擦除过的、干净的空闲块用于存储数据</li>
+<li>损耗均衡</li>
+<li>断电恢复</li>
+<li>坏块管理</li>
+</ul>
+<h1 id="FTL实现思路"><a href="#FTL实现思路" class="headerlink" title="FTL实现思路"></a>FTL实现思路</h1><p>文件系统至少都是基于扇区操作的，每次最小读写单位是1个扇区（512字节）。</p>
+<p>实现最基本的地址转换，有如下几种思路：</p>
+<ul>
+<li>1.先缓存要写的数据，等到4KB的时候再统一擦除，然后写入。</li>
+<li>2.先读出一个扇区的数据入缓存，然后每次写入都改缓存，等到4KB的时候，擦除，然后写入</li>
+<li>3.先读出一个扇区的数据入缓存，然后擦除扇区，然后写入数据，再恢复扇区内不应该被覆盖的页</li>
+<li>4.</li>
+</ul>
+<h1 id="FTL实现举例"><a href="#FTL实现举例" class="headerlink" title="FTL实现举例"></a>FTL实现举例</h1><p>USB项目中的实现：即上述第3种方式。</p>
+<p>由于是通过USB连接到主机，而且需要枚举成软盘，所以文件系统是FAT，一个扇区大小固定为512字节。这里只实现了地址映射功能。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div></pre></td><td class="code"><pre><div class="line">/*</div><div class="line"> *-----------------------------------------------------------------------</div><div class="line"> * Write Sector(s)</div><div class="line"> *-----------------------------------------------------------------------</div><div class="line"> */</div><div class="line"></div><div class="line">DRESULT disk_write(uint8_t drv, /* Physical drive nmuber (0) */</div><div class="line">const uint8_t *buff, /* Pointer to the data to be written */</div><div class="line">uint32_t sector, /* Start sector number (LBA) */</div><div class="line">uint8_t count /* Sector count (1..128) */</div><div class="line">) &#123;</div><div class="line">	uint32_t page_addr;</div><div class="line">	uint8_t i, j, k;</div><div class="line">	if (!count) &#123;</div><div class="line">		return (RES_PARERR);</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	uint8_t j_count = 0;</div><div class="line">	uint8_t sec_num_512, sec_num_4k;</div><div class="line">	uint8_t sec_position;</div><div class="line">	uint32_t arrayNum = 0;</div><div class="line">	uint8_t buffer[4096];</div><div class="line">	uint32_t sector_erase = 0; //擦除扇区号</div><div class="line">	uint32_t sec_addr_4k = 0;</div><div class="line">	uint32_t sec_addr_512 = 0;</div><div class="line"></div><div class="line">	//强制将w25q256以扇区512字节处理，可以理解为读写扇区大小为512字节，擦除扇区大小为4k字节。</div><div class="line">	sec_addr_512 = (sector * 512); //读写扇区地址</div><div class="line">	sec_addr_4k = sec_addr_512 &amp; 0xFFFFF000; //擦除扇区地址</div><div class="line">	sec_num_512 = count; //读写扇区的个数</div><div class="line">	sec_position = ((sec_addr_512 &amp; 0x00000F00) &gt;&gt; 8) / 2; //读写扇区在擦除扇区中的位置</div><div class="line">	sec_num_4k = 1 + (sec_position + sec_num_512) / 9; //需要擦除扇区的个数</div><div class="line"></div><div class="line">	for (i = 0; i &lt; sec_num_4k; i++) &#123;</div><div class="line"></div><div class="line">		if ((i == 0) &amp;&amp; (sec_num_4k != (uint8_t) 1)) &#123; //读写扇区在第一个擦除扇区内，且不只一个扇区</div><div class="line">			j_count = (uint8_t) 8 - sec_position;</div><div class="line">			sector_erase = sector - sec_position;</div><div class="line">			disk_read(0, buffer, sector_erase, sec_position);</div><div class="line"></div><div class="line">		&#125; else if ((i == 0) &amp;&amp; (sec_num_4k == 1)) &#123;	//只读写一个扇区</div><div class="line">			j_count = count;</div><div class="line">			sector_erase = sector - sec_position;</div><div class="line">			disk_read(0, buffer, sector_erase, sec_position);</div><div class="line">			arrayNum = (sec_position + sec_num_512) * 512;</div><div class="line">			disk_read(0, &amp;buffer[arrayNum], sector + sec_num_512,</div><div class="line">					8 - sec_num_512 - sec_position);</div><div class="line"></div><div class="line">		&#125; else if ((i == sec_num_4k - 1) &amp;&amp; (sec_num_4k != 1)) &#123;//读写扇区在最后一个擦除扇区内</div><div class="line">			j_count = (sec_position + sec_num_512) % 8;</div><div class="line">			sector_erase = sector + sec_num_512;</div><div class="line">			arrayNum = j_count * 512;</div><div class="line">			disk_read(0, &amp;buffer[arrayNum], sector_erase, 8 - sec_position);</div><div class="line">		&#125; else &#123;	//读写扇区在中间的擦除扇区内</div><div class="line">			j_count = 8;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		single_sector_erase(sec_addr_4k);</div><div class="line"></div><div class="line">		for (j = 0; j &lt; j_count; j++) &#123;</div><div class="line">			for (k = 0; k &lt; 2; k++) &#123;	//读写一个扇区</div><div class="line">				page_addr = sec_addr_512 + FLASH_PAGE_SIZE * k;</div><div class="line">				single_page_write(buff, page_addr);	//页写入</div><div class="line">				buff += FLASH_PAGE_SIZE;</div><div class="line">			&#125;</div><div class="line">			sec_addr_512 = sec_addr_512 + FLASH_SECTOR_SIZE_512;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		//恢复扇区内不应被覆盖的页</div><div class="line"></div><div class="line">		if ((i == 0) &amp;&amp; (sec_num_4k != 1)) &#123;	//读写扇区在第一个擦除扇区内，且不只一个扇区</div><div class="line">			arrayNum = 0;</div><div class="line">			for (k = 0; k &lt; sec_position * 2; k++) &#123;</div><div class="line">				page_addr = sec_addr_4k + FLASH_PAGE_SIZE * k;</div><div class="line">				arrayNum = FLASH_PAGE_SIZE * k;</div><div class="line">				single_page_write(&amp;buffer[arrayNum], page_addr);	//页写入</div><div class="line">			&#125;</div><div class="line">		&#125; else if ((i == 0) &amp;&amp; (sec_num_4k == 1)) &#123;	//只读写一个扇区</div><div class="line">			arrayNum = 0;</div><div class="line">			for (k = 0; k &lt; sec_position * 2; k++) &#123;</div><div class="line">				page_addr = sec_addr_4k + FLASH_PAGE_SIZE * k;</div><div class="line">				arrayNum = FLASH_PAGE_SIZE * k;</div><div class="line">				single_page_write(&amp;buffer[arrayNum], page_addr);	//页写入</div><div class="line">			&#125;</div><div class="line">			arrayNum = 0;</div><div class="line">			for (k = (sec_position + count) * 2; k &lt; 16; k++) &#123;</div><div class="line">				page_addr = sec_addr_4k + FLASH_PAGE_SIZE * k;</div><div class="line">				arrayNum = FLASH_PAGE_SIZE * k;</div><div class="line">				single_page_write(&amp;buffer[arrayNum], page_addr);	//页写入</div><div class="line">			&#125;</div><div class="line">		&#125; else if ((i == sec_num_4k - 1) &amp;&amp; (sec_num_4k != 1)) &#123;//读写扇区在最后一个擦除扇区内</div><div class="line">			arrayNum = 0;</div><div class="line">			for (k = ((sec_position + count) % 8) * 2; k &lt; 16; k++) &#123;</div><div class="line">				page_addr = sec_addr_4k + FLASH_PAGE_SIZE * k;</div><div class="line">				arrayNum = FLASH_PAGE_SIZE * k;</div><div class="line">				single_page_write(&amp;buffer[arrayNum], page_addr);	//页写入</div><div class="line">			&#125;</div><div class="line">		&#125; //读写扇区在中间的擦除扇区内,就不进行恢复了</div><div class="line"></div><div class="line">		sec_addr_4k = sec_addr_4k + FLASH_SECTOR_SIZE_4K;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	return (RES_OK);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/嵌入式/" rel="tag"># 嵌入式</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/02/26/从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard/" rel="next" title="从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard">
+                <i class="fa fa-chevron-left"></i> 从驱动到文件系统之3、SPI操作w25qXX 系列flash和sdcard
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/234.jpg"
+               alt="凡爷" />
+          <p class="site-author-name" itemprop="name">凡爷</p>
+          <p class="site-description motion-element" itemprop="description">我长大了要当一名科学家。</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">6</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">3</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://trecool.me/" title="Trecool" target="_blank">Trecool</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#FTL和NFTL概念"><span class="nav-number">1.</span> <span class="nav-text">FTL和NFTL概念</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#MTD概念"><span class="nav-number">1.1.</span> <span class="nav-text">MTD概念</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#FTL功能"><span class="nav-number">2.</span> <span class="nav-text">FTL功能</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#FTL实现思路"><span class="nav-number">3.</span> <span class="nav-text">FTL实现思路</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#FTL实现举例"><span class="nav-number">4.</span> <span class="nav-text">FTL实现举例</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">凡爷</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
