@@ -1,0 +1,741 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="嵌入式," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="前言fatfs文件系统的移植是以前做的一个课程设计，感觉还是比较有意思的，相当于从驱动层一直到文件系统层都弄了一遍，涉及到的东西比较多。
+fatfs介绍FatFS是一个为小型嵌入式系统设计的通用FAT（File Allocation Table）文件系统模块。FatFs的编写遵循ANSI C，并且完全与磁盘IO层分开。因此，它独立于硬件架构，可以被嵌入到很多低成本的微控制器。
+
+fatfs特点
+w">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从驱动到文件系统之5、fatfs文件系统的移植">
+<meta property="og:url" content="http://yoursite.com/2017/02/27/从驱动到文件系统之5、fatfs文件系统的移植/index.html">
+<meta property="og:site_name" content="凡锅锅的博客">
+<meta property="og:description" content="前言fatfs文件系统的移植是以前做的一个课程设计，感觉还是比较有意思的，相当于从驱动层一直到文件系统层都弄了一遍，涉及到的东西比较多。
+fatfs介绍FatFS是一个为小型嵌入式系统设计的通用FAT（File Allocation Table）文件系统模块。FatFs的编写遵循ANSI C，并且完全与磁盘IO层分开。因此，它独立于硬件架构，可以被嵌入到很多低成本的微控制器。
+
+fatfs特点
+w">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/132124119.png">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141001489.png">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141022207.png">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141033080.png">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141046119.png">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141056246.png">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141106958.png">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141115434.png">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141123448.png">
+<meta property="og:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141129999.png">
+<meta property="og:updated_time" content="2017-02-27T07:30:04.073Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="从驱动到文件系统之5、fatfs文件系统的移植">
+<meta name="twitter:description" content="前言fatfs文件系统的移植是以前做的一个课程设计，感觉还是比较有意思的，相当于从驱动层一直到文件系统层都弄了一遍，涉及到的东西比较多。
+fatfs介绍FatFS是一个为小型嵌入式系统设计的通用FAT（File Allocation Table）文件系统模块。FatFs的编写遵循ANSI C，并且完全与磁盘IO层分开。因此，它独立于硬件架构，可以被嵌入到很多低成本的微控制器。
+
+fatfs特点
+w">
+<meta name="twitter:image" content="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/132124119.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"always"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2017/02/27/从驱动到文件系统之5、fatfs文件系统的移植/"/>
+
+
+
+
+
+  <title> 从驱动到文件系统之5、fatfs文件系统的移植 | 凡锅锅的博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">凡锅锅的博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">刻意去找的东西，往往是找不到的。天下万物的来和去，都有他的时间。</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/02/27/从驱动到文件系统之5、fatfs文件系统的移植/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="凡爷">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/uploads/234.jpg">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="凡锅锅的博客">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="凡锅锅的博客" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                从驱动到文件系统之5、fatfs文件系统的移植
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-02-27T15:29:33+08:00">
+                2017-02-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+              <span class="post-meta-divider">|</span>
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/嵌入式/" itemprop="url" rel="index">
+                    <span itemprop="name">嵌入式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>fatfs文件系统的移植是以前做的一个课程设计，感觉还是比较有意思的，相当于从驱动层一直到文件系统层都弄了一遍，涉及到的东西比较多。</p>
+<h1 id="fatfs介绍"><a href="#fatfs介绍" class="headerlink" title="fatfs介绍"></a>fatfs介绍</h1><p>FatFS是一个为小型嵌入式系统设计的通用FAT（File Allocation Table）文件系统模块。FatFs的编写遵循ANSI C，并且完全与磁盘IO层分开。因此，它独立于硬件架构，可以被嵌入到很多低成本的微控制器。</p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/132124119.png" alt="mark"></p>
+<h1 id="fatfs特点"><a href="#fatfs特点" class="headerlink" title="fatfs特点"></a>fatfs特点</h1><ul>
+<li>windows兼容的FAT文件系统</li>
+<li>不依赖与平台，易于移植</li>
+<li>代码和工作区占用空间非常小</li>
+</ul>
+<h1 id="应用程序接口"><a href="#应用程序接口" class="headerlink" title="应用程序接口"></a>应用程序接口</h1><p>FatFs provides various file control functions for the applications as shown below.</p>
+<h2 id="File-Access"><a href="#File-Access" class="headerlink" title="File Access"></a>File Access</h2><p>f_open - Open/Create a file<br>f_close - Close an open file<br>f_read - Read data<br>f_write - Write data<br>f_lseek - Move read/write pointer, Expand size<br>f_truncate - Truncate size<br>f_sync - Flush cached data<br>f_forward - Forward data to the stream<br>f_expand - Allocate a contiguous block to the file<br>f_gets - Read a string<br>f_putc - Write a character<br>f_puts - Write a string<br>f_printf - Write a formatted string<br>f_tell - Get current read/write pointer<br>f_eof - Test for end-of-file<br>f_size - Get size<br>f_error - Test for an error</p>
+<h2 id="Directory-Access"><a href="#Directory-Access" class="headerlink" title="Directory Access"></a>Directory Access</h2><p>f_opendir - Open a directory<br>f_closedir - Close an open directory<br>f_readdir - Read an directory item<br>f_findfirst - Open a directory and read first item matched<br>f_findnext - Read a next item matched   </p>
+<h2 id="File-Directory-Management"><a href="#File-Directory-Management" class="headerlink" title="File/Directory Management"></a>File/Directory Management</h2><p>f_stat - Check existance of a file or sub-directory<br>f_unlink - Remove a file or sub-directory<br>f_rename - Rename or move a file or sub-directory<br>f_chmod - Change attribute of a file or sub-directory<br>f_utime - Change timestamp of a file or sub-directory<br>f_mkdir - Create a sub-directory<br>f_chdir - Change current directory<br>f_chdrive - Change current drive<br>f_getcwd - Retrieve the current directory and drive</p>
+<h2 id="Volume-Management"><a href="#Volume-Management" class="headerlink" title="Volume Management"></a>Volume Management</h2><p>f_mount - Register/Unregister a work area of a volume<br>f_mkfs - Create an FAT volume on the logical drive<br>f_fdisk - Create logical drives on the physical drive<br>f_getfree - Get total size and free size on the volume<br>f_getlabel - Get volume label<br>f_setlabel - Set volume label</p>
+<h1 id="磁盘I-O接口"><a href="#磁盘I-O接口" class="headerlink" title="磁盘I/O接口"></a>磁盘I/O接口</h1><p>其实下面这几个函数实现的是FTL的内容。</p>
+<h2 id="disk-initialize"><a href="#disk-initialize" class="headerlink" title="disk_initialize"></a>disk_initialize</h2><p>初始化磁盘驱动器</p>
+<h2 id="disk-read"><a href="#disk-read" class="headerlink" title="disk_read"></a>disk_read</h2><p>从磁盘驱动器中读取扇区</p>
+<h2 id="disk-write"><a href="#disk-write" class="headerlink" title="disk_write"></a>disk_write</h2><p>向磁盘驱动器中写入扇区</p>
+<h2 id="disk-ioctl"><a href="#disk-ioctl" class="headerlink" title="disk_ioctl"></a>disk_ioctl</h2><p>控制设备特定的功能以及磁盘读写以外的其它功能</p>
+<h2 id="get-fattime"><a href="#get-fattime" class="headerlink" title="get_fattime"></a>get_fattime</h2><p>获取当前时间</p>
+<h1 id="在cortex-M0上的移植"><a href="#在cortex-M0上的移植" class="headerlink" title="在cortex M0上的移植"></a>在cortex M0上的移植</h1><h2 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h2><p>芯片是cortex M0，flash采用w25q256。</p>
+<p>总的来说，就是在secureCRT上输入要执行的动作，串口得到动作编号，调用相应的fatfs接口。</p>
+<p>SPI驱动、SPI操作w25q16在前面的章节中已经讲述，这里主要是FTL层的实现以及应用层的实现（即fatfs接口的使用）和串口部分。</p>
+<h2 id="功能展示"><a href="#功能展示" class="headerlink" title="功能展示"></a>功能展示</h2><p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141001489.png" alt="mark"></p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141022207.png" alt="mark"></p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141033080.png" alt="mark"></p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141046119.png" alt="mark"></p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141056246.png" alt="mark"></p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141106958.png" alt="mark"></p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141115434.png" alt="mark"></p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141123448.png" alt="mark"></p>
+<p><img src="http://7xsgbk.com1.z0.glb.clouddn.com/blog/20170227/141129999.png" alt="mark"></p>
+<h2 id="功能"><a href="#功能" class="headerlink" title="功能"></a>功能</h2><p>全局变量</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">FATFS fs;</div><div class="line">FRESULT res;</div></pre></td></tr></table></figure>
+<h3 id="格式化磁盘"><a href="#格式化磁盘" class="headerlink" title="格式化磁盘"></a>格式化磁盘</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line">//1.磁盘格式化</div><div class="line">void format_disk(void)</div><div class="line">&#123;</div><div class="line"></div><div class="line">	f_mount(&amp;fs,&quot;0&quot;,1);	</div><div class="line">	if (res != FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n挂载文件系统失败\n\n&quot;);</div><div class="line">		return;</div><div class="line">	&#125;	</div><div class="line">	printf(&quot;\r\n正在格式化磁盘,请稍候...\n\n&quot;);</div><div class="line"></div><div class="line">	res=f_mkfs(&quot;0&quot;,1,4096);  //驱动号，分区规则，分区大小</div><div class="line">	if (res == FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n格式化成功...\n\n&quot;);</div><div class="line">	&#125;</div><div class="line">	else</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n格式化失败...\n\n&quot;);</div><div class="line">	&#125;</div><div class="line">	f_mount(NULL,&quot;0&quot;,1);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="创建文件"><a href="#创建文件" class="headerlink" title="创建文件"></a>创建文件</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line">//2.创建文件</div><div class="line">void creat_file(void)</div><div class="line">&#123;</div><div class="line"></div><div class="line">	FIL file;</div><div class="line">	</div><div class="line">	f_mount(&amp;fs,&quot;0&quot;,1);	                        </div><div class="line">	if (res != FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n挂载文件系统失败&quot;);</div><div class="line">		return;</div><div class="line">	&#125;	</div><div class="line">	printf(&quot;\r\n请输入文件名:\n&quot;);</div><div class="line">  get_uart_str(uart_string);</div><div class="line">	res = f_open(&amp;file,(TCHAR *)uart_string,FA_READ | FA_WRITE | FA_CREATE_NEW);</div><div class="line">	if (res == FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n创建文件成功!&quot;);</div><div class="line">		res = f_close(&amp;file);</div><div class="line">		if (res != FR_OK)</div><div class="line">		&#123;</div><div class="line">			printf(&quot;\r\n创建文件成功,但关闭文件时,失败!&quot;);		</div><div class="line">		&#125;				</div><div class="line">	&#125;</div><div class="line">	else</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n创建文件失败!&quot;);</div><div class="line">	&#125;</div><div class="line">	f_mount(NULL,&quot;0&quot;,1);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="删除文件"><a href="#删除文件" class="headerlink" title="删除文件"></a>删除文件</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div></pre></td><td class="code"><pre><div class="line">//3.删除文件</div><div class="line">void delete_file(void)</div><div class="line">&#123;</div><div class="line">	DIR dirs;</div><div class="line">	FILINFO finfo;</div><div class="line">	uint32_t files_num = 0;</div><div class="line"></div><div class="line">	res=f_mount(&amp;fs,&quot;0&quot;,1);				      //Mount a Logical Drive 0</div><div class="line">	if (res != FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n挂载文件系统失败&quot;);</div><div class="line">		return;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	res = f_opendir(&amp;dirs,&quot;/&quot;);		 //Create a Directroy Object </div><div class="line">	if (res == FR_OK) </div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n-----------文件列表-------&quot;);</div><div class="line">		while ((f_readdir(&amp;dirs, &amp;finfo) == FR_OK) &amp;&amp; finfo.fname[0]) </div><div class="line">		&#123;</div><div class="line">			if (finfo.fattrib &amp; AM_DIR)//如果是文件夹 </div><div class="line">			&#123; </div><div class="line">				continue;</div><div class="line">			&#125; </div><div class="line">			else </div><div class="line">			&#123;   </div><div class="line">				files_num++;</div><div class="line">				//显示文件名</div><div class="line">				printf(&quot;\r\n/%12s &quot;,  &amp;finfo.fname[0]);</div><div class="line"> 			&#125;</div><div class="line">		&#125;</div><div class="line">		if( files_num == 0 )//无文件</div><div class="line">		&#123;</div><div class="line">			printf(&quot;\r\n无文件,请返回先创建文件!&quot;);</div><div class="line">			return;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	printf(&quot;\r\n请输入要删除的文件名,回车确认...\n&quot;);</div><div class="line">	get_uart_str(uart_string);</div><div class="line">	res = f_unlink((TCHAR *)uart_string);	  //Delete a File or Directory </div><div class="line"></div><div class="line">	if (res == FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n删除文件成功!&quot;);</div><div class="line">	&#125;</div><div class="line">	else if (res == FR_NO_FILE)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n找不到文件或目录!&quot;);</div><div class="line">	&#125;</div><div class="line">	else if (res == FR_NO_PATH)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n找不到路径!&quot;);</div><div class="line">	&#125;</div><div class="line">	f_mount(NULL,&quot;0&quot;,1);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="文件列表"><a href="#文件列表" class="headerlink" title="文件列表"></a>文件列表</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div></pre></td><td class="code"><pre><div class="line">//4.列表文件</div><div class="line">void list_file(void)</div><div class="line">&#123;</div><div class="line">	FILINFO finfo;</div><div class="line">	DIR dirs;</div><div class="line">	int i;</div><div class="line">	int files_num=0;</div><div class="line">	res=f_mount(&amp;fs,&quot;0&quot;,1);		</div><div class="line">	if (res != FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n挂载文件系统失败&quot;);</div><div class="line">		return;</div><div class="line">	&#125;	</div><div class="line">	res = f_opendir(&amp;dirs,&quot;/&quot;);							// Create a Directroy Object </div><div class="line">	printf(&quot;\r\n------------文件列表------------&quot;);</div><div class="line">	if (res == FR_OK)</div><div class="line">	&#123;</div><div class="line">		while ((f_readdir(&amp;dirs, &amp;finfo) == FR_OK) &amp;&amp; finfo.fname[0]) 	 // Read Directory Entry in Sequense</div><div class="line">		&#123;</div><div class="line">			i = strlen(finfo.fname);</div><div class="line">			if (finfo.fattrib &amp; AM_DIR)//如果是文件夹 </div><div class="line">			&#123;</div><div class="line">				files_num++;</div><div class="line">				printf(&quot;\r\n/%s&quot;, &amp;finfo.fname[0]);</div><div class="line">				switch(i)//作用：输出文件名左对齐</div><div class="line">				&#123;</div><div class="line">				case 1:printf(&quot; &quot;);</div><div class="line">				case 2:printf(&quot; &quot;);</div><div class="line">				case 3:printf(&quot; &quot;);</div><div class="line">				case 4:printf(&quot; &quot;);</div><div class="line">				case 5:printf(&quot; &quot;);</div><div class="line">				case 6:printf(&quot; &quot;);</div><div class="line">				case 7:printf(&quot; &quot;);</div><div class="line">				case 8:printf(&quot;%15s&quot;,&quot; &quot;);</div><div class="line">				&#125;	</div><div class="line">			&#125; </div><div class="line">			else </div><div class="line">			&#123;</div><div class="line">				continue;</div><div class="line">			&#125;	</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	else</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n打开根目录失败!&quot;);</div><div class="line">	&#125;</div><div class="line">	res = f_opendir(&amp;dirs, &quot;/&quot;);</div><div class="line">	if (res == FR_OK) </div><div class="line">	&#123;</div><div class="line">		while ((f_readdir(&amp;dirs, &amp;finfo) == FR_OK) &amp;&amp; finfo.fname[0]) </div><div class="line">		&#123;</div><div class="line">			if (finfo.fattrib &amp; AM_DIR) </div><div class="line">			&#123; </div><div class="line">				continue;</div><div class="line">			&#125; </div><div class="line">			else </div><div class="line">			&#123;   </div><div class="line">				files_num++;				</div><div class="line">				printf(&quot;\r\n/.%12s &quot;,  &amp;finfo.fname[0]);				</div><div class="line">			&#125;</div><div class="line">		&#125;</div><div class="line">		if( files_num==0 )//无文件</div><div class="line">		&#123;</div><div class="line">			printf(&quot;\r\n无文件!&quot;);    </div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	else</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n打开根目录失败!&quot;);</div><div class="line">	&#125;</div><div class="line">	f_mount(NULL,&quot;0&quot;,1);	</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="磁盘信息"><a href="#磁盘信息" class="headerlink" title="磁盘信息"></a>磁盘信息</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">//5.磁盘信息</div><div class="line">void get_disk_info(void)</div><div class="line">&#123;</div><div class="line">	FATFS fs;</div><div class="line">	FATFS *fls = &amp;fs;</div><div class="line">	DWORD fre_clust;	</div><div class="line">	</div><div class="line">	res=f_mount(&amp;fs,&quot;0&quot;,1);			</div><div class="line">	if (res != FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n挂载文件系统失败&quot;);</div><div class="line">		return;</div><div class="line">	&#125;	</div><div class="line"></div><div class="line">	res = f_getfree(&quot;/&quot;,&amp;fre_clust,&amp;fls);		 // Get Number of Free Clusters </div><div class="line">	if (res == FR_OK) </div><div class="line">	&#123;</div><div class="line">	                                             //Print free space in unit of MB (assuming 4096 bytes/sector) </div><div class="line">        printf(&quot;\r\n%d KB Total Drive Space.\r\n&quot;</div><div class="line">               &quot;%d KB Available Space.\r\n&quot;,</div><div class="line">               ((fls-&gt;n_fatent-2)*fls-&gt;csize)*4,(fre_clust*fls-&gt;csize)*4);</div><div class="line">	&#125;</div><div class="line">	else</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n获得磁盘信息失败!&quot;);</div><div class="line">	&#125;																									   </div><div class="line">	f_mount(NULL,&quot;0&quot;,1);					     //Unmount a Logical Drive 0 </div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="创建目录"><a href="#创建目录" class="headerlink" title="创建目录"></a>创建目录</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">//6.创建目录</div><div class="line">void creat_dir(void)</div><div class="line">&#123;   </div><div class="line"></div><div class="line">	res=f_mount(&amp;fs,&quot;0&quot;,1);		</div><div class="line">	if (res != FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n挂载文件系统失败&quot;);</div><div class="line">		return;</div><div class="line">	&#125;	</div><div class="line">	printf(&quot;\r\n请输入文件夹名:&quot;);</div><div class="line">  get_uart_str(uart_string);</div><div class="line">	res = f_mkdir((TCHAR*)uart_string);</div><div class="line">	if (res == FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n创建文件目录成功!&quot;);</div><div class="line">	&#125;</div><div class="line">	else</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n创建目录失败...&quot;);</div><div class="line">		printf(&quot;%u&quot;,res);</div><div class="line">	&#125;</div><div class="line">	f_mount(NULL,&quot;0&quot;,1);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="写文件"><a href="#写文件" class="headerlink" title="写文件"></a>写文件</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div></pre></td><td class="code"><pre><div class="line">void edit_file(void)</div><div class="line">&#123;</div><div class="line">	FIL	file;</div><div class="line">	DIR dirs;</div><div class="line">	FILINFO finfo;</div><div class="line">	//uint8_t *path;</div><div class="line">	//uint8_t *file_buff;</div><div class="line">	//uint32_t path_len=5;</div><div class="line">	//uint32_t file_buff_len=10;</div><div class="line">	//char path[20]=&#123;&quot;hehe&quot;&#125;;</div><div class="line">  //BYTE file_buff[30]=&#123;&quot;haha&quot;&#125;;</div><div class="line">//  char buffer[512] = &#123;0&#125;;</div><div class="line"></div><div class="line">//	uint32_t index = 0x00;</div><div class="line">	uint32_t reindex = 0x00;</div><div class="line">//  uint32_t re = 0x00;</div><div class="line">	uint32_t files_num = 0;</div><div class="line">	res=f_mount(&amp;fs,&quot;0&quot;,1);	</div><div class="line">	if (res != FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n挂载文件系统失败&quot;);</div><div class="line">		return;</div><div class="line">	&#125;</div><div class="line">	res = f_opendir(&amp;dirs,&quot;/&quot;);</div><div class="line">	printf(&quot;\r\n------------文件列表------------&quot;);</div><div class="line">	if (res == FR_OK) </div><div class="line">	&#123;</div><div class="line">		while ((f_readdir(&amp;dirs, &amp;finfo) == FR_OK) &amp;&amp; finfo.fname[0]) </div><div class="line">		&#123;</div><div class="line">			if (finfo.fattrib &amp; AM_DIR)//如果是文件夹 </div><div class="line">			&#123; </div><div class="line">				continue;</div><div class="line">			&#125; </div><div class="line">			else </div><div class="line">			&#123;   </div><div class="line">				files_num++;</div><div class="line">				//显示文件名</div><div class="line">				printf(&quot;\r\n/%12s &quot;,  &amp;finfo.fname[0]);</div><div class="line">			&#125;</div><div class="line">		&#125;</div><div class="line">		if( files_num == 0 )//无文件</div><div class="line">		&#123;</div><div class="line">			printf(&quot;\r\n无文件!&quot;);    </div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	else</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n打开根目录失败!&quot;);</div><div class="line">	&#125;</div><div class="line">	printf(&quot;\r\n输入要编辑文件全名:&quot;);</div><div class="line">  get_uart_str(uart_string);	</div><div class="line">	res = f_open(&amp;file,(TCHAR *)uart_string,FA_READ | FA_WRITE);</div><div class="line">	if (res == FR_OK)</div><div class="line">	&#123;	</div><div class="line">		printf(&quot;\r\n %s 打开成功&quot;,uart_string);</div><div class="line">		printf(&quot;\r\n输入写入文件的内容:&quot;);</div><div class="line">    get_uart_str(uart_string);	</div><div class="line">		res = f_write(&amp;file,uart_string,sizeof(uart_string),&amp;reindex);</div><div class="line">		if ((res == FR_OK))</div><div class="line">			&#123;</div><div class="line">					printf(&quot;\r\n保存数据成功!&quot;);</div><div class="line">					f_close(&amp;file);</div><div class="line">			&#125;</div><div class="line">	else</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n打开文件失败,错误代码: %u&quot;,res);</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="读文件"><a href="#读文件" class="headerlink" title="读文件"></a>读文件</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div></pre></td><td class="code"><pre><div class="line">//8.读文件</div><div class="line">void read_file(void)</div><div class="line">&#123;</div><div class="line"></div><div class="line">	FIL	file; </div><div class="line">	DIR dirs;</div><div class="line">	FILINFO finfo;</div><div class="line">	//uint8_t *path;</div><div class="line">	//uint32_t path_len=5;</div><div class="line">	BYTE buffer[512] = &#123;0&#125;;</div><div class="line">//	uint32_t i;</div><div class="line">	uint32_t re,files_num = 0;</div><div class="line">	res=f_mount(&amp;fs,&quot;0&quot;,1);			</div><div class="line">	if (res != FR_OK)</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n挂载文件系统失败&quot;);</div><div class="line">		return;</div><div class="line">	&#125;</div><div class="line">	res = f_opendir(&amp;dirs,&quot;/&quot;);</div><div class="line">	if (res == FR_OK) </div><div class="line">	&#123;</div><div class="line">		//i = strlen(path);</div><div class="line">		printf(&quot;\r\n-----------文件列表-------&quot;);</div><div class="line">		while ((f_readdir(&amp;dirs, &amp;finfo) == FR_OK) &amp;&amp; finfo.fname[0]) </div><div class="line">		&#123;</div><div class="line">			if (finfo.fattrib &amp; AM_DIR)//如果是文件夹 </div><div class="line">			&#123; </div><div class="line">				continue;</div><div class="line">			&#125; </div><div class="line">			else </div><div class="line">			&#123;   </div><div class="line">				files_num++;</div><div class="line">				//显示文件名</div><div class="line">				printf(&quot;\r\n/%s&quot;,  &amp;finfo.fname[0]);</div><div class="line"> 			&#125;</div><div class="line">		&#125;</div><div class="line">		if( files_num == 0 )//无文件</div><div class="line">		&#123;</div><div class="line">			printf(&quot;\r\n无文件,请返回先创建文件!&quot;);</div><div class="line">			return;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	else</div><div class="line">	&#123;</div><div class="line">		printf(&quot;\r\n打开根目录失败!&quot;);</div><div class="line">	&#125;</div><div class="line">	printf(&quot;\r\n输入文件全名:&quot;);</div><div class="line"></div><div class="line">	get_uart_str(uart_string);	</div><div class="line">	res = f_open(&amp;file,(TCHAR *)uart_string,FA_READ);</div><div class="line">	printf(&quot;\r\n正在打开文件,以下是文件数据:\r\n&quot;);</div><div class="line">		res = f_read(&amp;file,buffer,512,&amp;re);</div><div class="line">			printf(&quot;%s&quot;,buffer);</div><div class="line">	if ((res == FR_OK))</div><div class="line">			&#123;</div><div class="line">				printf(&quot;\r\n文件读取结束,关闭文件!&quot;);</div><div class="line">				f_close(&amp;file);</div><div class="line">			&#125;	</div><div class="line">	f_mount(NULL,&quot;0&quot;,1);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="串口部分"><a href="#串口部分" class="headerlink" title="串口部分"></a>串口部分</h3><p>串口只是用来实现交互作用，比如从secureCRT读入文件名</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">while(1)&#123;</div><div class="line">		DrvUART_Read(UART_PORT0,&amp;str[i],1);</div><div class="line">		DrvUART_Write(UART_PORT0,&amp;str[i],1);</div><div class="line">		if(str[i] == &apos;\r&apos;)&#123;</div><div class="line">				break;</div><div class="line">		&#125;</div><div class="line">		i++;</div><div class="line">	&#125;</div></pre></td></tr></table></figure>
+<h2 id="磁盘I-O接口（FTL）实现"><a href="#磁盘I-O接口（FTL）实现" class="headerlink" title="磁盘I/O接口（FTL）实现"></a>磁盘I/O接口（FTL）实现</h2><p>这里假设一个扇区是4096字节<br>而flash的一个扇区也是4096字节，一页是256字节</p>
+<h3 id="disk-read-1"><a href="#disk-read-1" class="headerlink" title="disk_read"></a>disk_read</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div></pre></td><td class="code"><pre><div class="line">/*-----------------------------------------------------------------------*/</div><div class="line">/* Read Sector(s)                                                        */</div><div class="line">/*-----------------------------------------------------------------------*/</div><div class="line"></div><div class="line">DRESULT disk_read (</div><div class="line">	BYTE drv,		/* Physical drive nmuber (0..) */</div><div class="line">	BYTE *buff,		/* Data buffer to store read data */</div><div class="line">	DWORD sector,	/* Sector address (LBA) 32位*/</div><div class="line">	UINT count		/* Number of sectors to read (1..255) */</div><div class="line">)</div><div class="line">&#123;</div><div class="line">	uint32_t page_addr,sec_addr;</div><div class="line">	uint8_t i,j;</div><div class="line">	sec_addr = sector &lt;&lt; 12; 											//&amp; 0xFFFFF000;</div><div class="line"></div><div class="line">	for(i=0; i&lt;count;i++)&#123;</div><div class="line">		sec_addr = sec_addr + FLASH_SECTOR_SIZE*i;</div><div class="line">		for(j=0;j&lt;0x10;j++)&#123;</div><div class="line">			page_addr = sec_addr + FLASH_PAGE_SIZE*j;</div><div class="line">			W25Q16_PR( buff, page_addr);							//页读取	</div><div class="line">			buff += FLASH_PAGE_SIZE;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	return RES_OK;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="disk-write-1"><a href="#disk-write-1" class="headerlink" title="disk_write"></a>disk_write</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">DRESULT disk_write (</div><div class="line">	BYTE drv,			/* Physical drive nmuber (0..) */</div><div class="line">	const BYTE *buff,	/* Data to be written */</div><div class="line">	DWORD sector,		/* Sector address (LBA) */</div><div class="line">	UINT count			/* Number of sectors to write (1..255) */</div><div class="line">)</div><div class="line">&#123;</div><div class="line">	uint32_t page_addr,sec_addr;</div><div class="line">	uint8_t i,j;</div><div class="line">	sec_addr = sector &lt;&lt; 12; 									//&amp; 0xFFFFF000;</div><div class="line">  //W25Q16_CErase();</div><div class="line">	for(i=0; i&lt;count;i++)&#123;</div><div class="line">		sec_addr = sec_addr + FLASH_SECTOR_SIZE*i;</div><div class="line">		W25Q16_SErase(sec_addr);</div><div class="line">		for(j=0;j&lt;0x10;j++)&#123;</div><div class="line">			page_addr = sec_addr + FLASH_PAGE_SIZE*j;</div><div class="line">			W25Q16_PW((uint32_t)page_addr, (uint8_t *)buff);								//页写入</div><div class="line">			buff += FLASH_PAGE_SIZE;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	return RES_OK;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="disk-ioctl-1"><a href="#disk-ioctl-1" class="headerlink" title="disk_ioctl"></a>disk_ioctl</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line">DRESULT disk_ioctl (</div><div class="line">	BYTE drv,		/* Physical drive nmuber (0..) */</div><div class="line">	BYTE ctrl,		/* Control code */</div><div class="line">	void *buff		/* Buffer to send/receive control data */</div><div class="line">)</div><div class="line">&#123;</div><div class="line">    DRESULT res;</div><div class="line">    switch(ctrl)</div><div class="line">    &#123;</div><div class="line">			case CTRL_SYNC:</div><div class="line">        break;</div><div class="line">			case GET_SECTOR_COUNT:</div><div class="line">        *(DWORD*)buff = 512;				//2M/4K</div><div class="line">        res = RES_OK;</div><div class="line">        break;</div><div class="line">			case GET_SECTOR_SIZE:</div><div class="line">        *((WORD*)buff) = 4096;				//512</div><div class="line">        res = RES_OK;</div><div class="line">        break;</div><div class="line">		  case GET_BLOCK_SIZE:</div><div class="line">        *(WORD*)buff = 4096*16;</div><div class="line">        res = RES_OK;</div><div class="line">        break;</div><div class="line">      default:</div><div class="line">        res = RES_PARERR;</div><div class="line">        break;</div><div class="line">    &#125;</div><div class="line">    return res;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="flash读写"><a href="#flash读写" class="headerlink" title="flash读写"></a>flash读写</h2><p>使用的是w25q16，详细操作见本系列前述文章</p>
+<h2 id="spi驱动"><a href="#spi驱动" class="headerlink" title="spi驱动"></a>spi驱动</h2><p>使用的cortex M0，详细操作见本系列前述文章</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/嵌入式/" rel="tag"># 嵌入式</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/02/26/从驱动到文件系统之4、flash转换层 ftl/" rel="next" title="从驱动到文件系统之4、Flash转换层 FTL">
+                <i class="fa fa-chevron-left"></i> 从驱动到文件系统之4、Flash转换层 FTL
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/234.jpg"
+               alt="凡爷" />
+          <p class="site-author-name" itemprop="name">凡爷</p>
+          <p class="site-description motion-element" itemprop="description">我长大了要当一名科学家。</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">7</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">3</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://trecool.me/" title="Trecool" target="_blank">Trecool</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#fatfs介绍"><span class="nav-number">2.</span> <span class="nav-text">fatfs介绍</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#fatfs特点"><span class="nav-number">3.</span> <span class="nav-text">fatfs特点</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#应用程序接口"><span class="nav-number">4.</span> <span class="nav-text">应用程序接口</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#File-Access"><span class="nav-number">4.1.</span> <span class="nav-text">File Access</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Directory-Access"><span class="nav-number">4.2.</span> <span class="nav-text">Directory Access</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#File-Directory-Management"><span class="nav-number">4.3.</span> <span class="nav-text">File/Directory Management</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Volume-Management"><span class="nav-number">4.4.</span> <span class="nav-text">Volume Management</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#磁盘I-O接口"><span class="nav-number">5.</span> <span class="nav-text">磁盘I/O接口</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#disk-initialize"><span class="nav-number">5.1.</span> <span class="nav-text">disk_initialize</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#disk-read"><span class="nav-number">5.2.</span> <span class="nav-text">disk_read</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#disk-write"><span class="nav-number">5.3.</span> <span class="nav-text">disk_write</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#disk-ioctl"><span class="nav-number">5.4.</span> <span class="nav-text">disk_ioctl</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#get-fattime"><span class="nav-number">5.5.</span> <span class="nav-text">get_fattime</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#在cortex-M0上的移植"><span class="nav-number">6.</span> <span class="nav-text">在cortex M0上的移植</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#介绍"><span class="nav-number">6.1.</span> <span class="nav-text">介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#功能展示"><span class="nav-number">6.2.</span> <span class="nav-text">功能展示</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#功能"><span class="nav-number">6.3.</span> <span class="nav-text">功能</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#格式化磁盘"><span class="nav-number">6.3.1.</span> <span class="nav-text">格式化磁盘</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建文件"><span class="nav-number">6.3.2.</span> <span class="nav-text">创建文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除文件"><span class="nav-number">6.3.3.</span> <span class="nav-text">删除文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#文件列表"><span class="nav-number">6.3.4.</span> <span class="nav-text">文件列表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#磁盘信息"><span class="nav-number">6.3.5.</span> <span class="nav-text">磁盘信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建目录"><span class="nav-number">6.3.6.</span> <span class="nav-text">创建目录</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#写文件"><span class="nav-number">6.3.7.</span> <span class="nav-text">写文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#读文件"><span class="nav-number">6.3.8.</span> <span class="nav-text">读文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#串口部分"><span class="nav-number">6.3.9.</span> <span class="nav-text">串口部分</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#磁盘I-O接口（FTL）实现"><span class="nav-number">6.4.</span> <span class="nav-text">磁盘I/O接口（FTL）实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#disk-read-1"><span class="nav-number">6.4.1.</span> <span class="nav-text">disk_read</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#disk-write-1"><span class="nav-number">6.4.2.</span> <span class="nav-text">disk_write</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#disk-ioctl-1"><span class="nav-number">6.4.3.</span> <span class="nav-text">disk_ioctl</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#flash读写"><span class="nav-number">6.5.</span> <span class="nav-text">flash读写</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#spi驱动"><span class="nav-number">6.6.</span> <span class="nav-text">spi驱动</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">凡爷</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
